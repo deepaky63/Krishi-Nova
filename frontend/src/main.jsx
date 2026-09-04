@@ -7,7 +7,7 @@ import './styles.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename="/Krishi-Nova">
       <AppProvider><App /></AppProvider>
     </BrowserRouter>
   </StrictMode>,
