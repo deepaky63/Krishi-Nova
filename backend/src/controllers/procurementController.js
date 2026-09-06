@@ -1,0 +1,9 @@
+import * as service from '../services/procurementService.js';
+import { success } from '../utils/response.js';
+export const get = async (req, res) => success(res, await service.getByBooking(req.params.bookingId, req.user));
+export const verify = async (req, res) => success(res, await service.verify(req.params.bookingId, req.body, req.user));
+export const quality = async (req, res) => success(res, await service.quality(req.params.bookingId, req.body, req.user));
+export const weighing = async (req, res) => success(res, await service.weighing(req.params.bookingId, req.body, req.user));
+export const complete = async (req, res) => success(res, await service.complete(req.params.bookingId, req.user));
+export const createSettlement = async (req, res) => success(res, await service.createSettlement(req.body, req.user), 201);
+export const getSettlement = async (req, res) => success(res, await service.getSettlement(req.params.bookingId, req.user));

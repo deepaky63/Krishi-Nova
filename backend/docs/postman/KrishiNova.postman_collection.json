@@ -1,0 +1,14 @@
+{
+  "info": { "name": "Krishi Nova API", "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json" },
+  "variable": [{ "key": "baseUrl", "value": "http://localhost:5000" }, { "key": "accessToken", "value": "" }, { "key": "bookingId", "value": "" }],
+  "item": [
+    { "name": "Health", "request": { "method": "GET", "url": "{{baseUrl}}/api/health" } },
+    { "name": "Register farmer", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"name\":\"Farmer Name\",\"mobile\":\"9999999999\",\"password\":\"change-me-now\"}" }, "url": "{{baseUrl}}/api/auth/register" } },
+    { "name": "Login", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\"identifier\":\"9999999999\",\"password\":\"change-me-now\"}" }, "url": "{{baseUrl}}/api/auth/login" } },
+    { "name": "Centres", "request": { "method": "GET", "url": "{{baseUrl}}/api/centres" } },
+    { "name": "Commodities", "request": { "method": "GET", "url": "{{baseUrl}}/api/commodities" } },
+    { "name": "Slots", "request": { "method": "GET", "url": "{{baseUrl}}/api/slots" } },
+    { "name": "My bookings", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/bookings/my" } },
+    { "name": "Notifications", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/api/notifications" } }
+  ]
+}

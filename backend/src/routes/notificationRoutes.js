@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { authenticate } from '../middleware/auth.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import * as controller from '../controllers/notificationController.js';
+const router = Router();
+router.use(authenticate);
+router.get('/', asyncHandler(controller.list));
+router.patch('/:id/read', asyncHandler(controller.markRead));
+router.patch('/read-all', asyncHandler(controller.markAllRead));
+export default router;

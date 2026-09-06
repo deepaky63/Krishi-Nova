@@ -1,0 +1,14 @@
+import { Router } from 'express';
+import { authenticate } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import * as controller from '../controllers/adminController.js';
+import { validate } from '../middleware/validate.js';
+import { createStaffSchema, updateStaffSchema } from '../validators/admin.js';
+const router = Router(); router.use(authenticate, authorize('admin'));
+router.get('/dashboard', asyncHandler(controller.dashboard));
+router.get('/users', asyncHandler(controller.listUsers));
+router.get('/users/staff', asyncHandler(controller.listStaff));
+router.post('/users/staff', validate(createStaffSchema), asyncHandler(controller.createStaff));
+router.patch('/users/staff/:id', validate(updateStaffSchema), asyncHandler(controller.updateStaff));
+export default router;

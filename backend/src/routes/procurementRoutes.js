@@ -1,0 +1,15 @@
+import { Router } from 'express';
+import { authenticate } from '../middleware/auth.js';
+import { authorize } from '../middleware/authorize.js';
+import { asyncHandler } from '../utils/asyncHandler.js';
+import * as controller from '../controllers/procurementController.js';
+const router = Router();
+router.use(authenticate);
+router.get('/:bookingId', asyncHandler(controller.get));
+router.get('/:bookingId/settlement', asyncHandler(controller.getSettlement));
+router.post('/:bookingId/verify', authorize('staff', 'admin'), asyncHandler(controller.verify));
+router.post('/:bookingId/quality', authorize('staff', 'admin'), asyncHandler(controller.quality));
+router.post('/:bookingId/weighing', authorize('staff', 'admin'), asyncHandler(controller.weighing));
+router.post('/:bookingId/complete', authorize('staff', 'admin'), asyncHandler(controller.complete));
+router.post('/settlements', authorize('staff', 'admin'), asyncHandler(controller.createSettlement));
+export default router;

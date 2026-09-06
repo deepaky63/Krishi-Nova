@@ -1,0 +1,4 @@
+import mongoose from 'mongoose';
+
+const settlementSchema = new mongoose.Schema({ bookingId: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking', required: true, unique: true }, procurementId: { type: mongoose.Schema.Types.ObjectId, ref: 'Procurement', required: true }, farmerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true }, centreId: { type: mongoose.Schema.Types.ObjectId, ref: 'Centre', required: true, index: true }, paymentStatus: { type: String, enum: ['pending', 'processing', 'initiated', 'completed', 'failed', 'cancelled'], default: 'pending' }, payableAmount: { type: Number, min: 0 }, paymentReference: String, paidAt: Date, paymentRemarks: String, createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }, updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' } }, { timestamps: true });
+export const Settlement = mongoose.model('Settlement', settlementSchema);

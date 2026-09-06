@@ -1,3 +1,4 @@
+.header-user { display:flex; flex-direction:column; align-items:flex-start; color:var(--green-900); line-height:1.15; padding:7px 10px; border:1px solid #d4e2d5; border-radius:8px; background:#f5faf4; }.header-user b { font-size:.78rem; }.header-user small { color:var(--muted); font-size:.64rem; text-transform:capitalize; margin-top:3px; }.mobile-user-link { color:var(--green-900) !important; }
 :root { --green-950:#07351f; --green-900:#0b482b; --green:#0f673c; --green-600:#167346; --green-100:#e8f2e9; --green-50:#f4f8f3; --gold:#d98f08; --gold-100:#fff3dc; --blue:#245fb3; --blue-100:#eaf1ff; --ink:#143126; --muted:#66756d; --line:#dfe8e0; --warm:#fbfaf5; --white:#fff; --red:#b94a48; --shadow:0 12px 32px rgba(13,57,34,.09); --radius:16px; }
 * { box-sizing:border-box; }
 .role-card.green .btn { background:var(--green); }

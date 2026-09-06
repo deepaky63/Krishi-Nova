@@ -1,0 +1,174 @@
+openapi: 3.0.3
+info:
+  title: Krishi Nova API
+  version: 1.0.0
+  description: REST API for the Krishi Nova smart procurement platform.
+servers:
+  - url: http://localhost:5000
+  - url: https://krishi-nova-backend.onrender.com
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    refreshCookie:
+      type: apiKey
+      in: cookie
+      name: refreshToken
+  schemas:
+    Success:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data: { type: object }
+    Error:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string }
+        code: { type: string }
+paths:
+  /api/health:
+    get:
+      summary: Health check
+      responses:
+        '200': { description: Healthy }
+  /api/auth/register:
+    post:
+      summary: Register a farmer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, password]
+              properties:
+                name: { type: string }
+                email: { type: string, format: email }
+                mobile: { type: string }
+                password: { type: string, format: password }
+      responses:
+        '201': { description: Created }
+  /api/auth/login:
+    post:
+      summary: Login with email or mobile
+      responses:
+        '200': { description: Authenticated }
+  /api/auth/refresh:
+    post:
+      security: [{ refreshCookie: [] }]
+      responses:
+        '200': { description: Refreshed }
+  /api/auth/logout:
+    post:
+      responses:
+        '200': { description: Logged out }
+  /api/auth/me:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Current user }
+  /api/centres:
+    get:
+      summary: List active procurement centres
+      responses:
+        '200': { description: Centre list }
+  /api/centres/{id}:
+    get:
+      summary: Get a centre
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Centre }
+  /api/commodities:
+    get:
+      summary: List active commodities
+      responses:
+        '200': { description: Commodity list }
+  /api/slots:
+    get:
+      summary: List slots
+      responses:
+        '200': { description: Slot list }
+  /api/bookings:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Create an atomic farmer booking
+      responses:
+        '201': { description: Booking created }
+  /api/bookings/my:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Farmer bookings }
+  /api/bookings/{id}:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Booking }
+  /api/bookings/{id}/cancel:
+    post:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Cancelled }
+  /api/staff/queue:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Assigned queue }
+  /api/staff/bookings/{bookingId}/check-in:
+    post:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Checked in }
+  /api/staff/queue/{id}/status:
+    patch:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Queue status updated }
+  /api/procurements/{bookingId}:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Procurement record }
+  /api/procurements/{bookingId}/verify:
+    post:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Verification saved }
+  /api/procurements/{bookingId}/quality:
+    post:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Quality decision saved }
+  /api/procurements/{bookingId}/weighing:
+    post:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Weighing saved }
+  /api/procurements/{bookingId}/complete:
+    post:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Procurement completed }
+  /api/notifications:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Notifications }
+  /api/notifications/read-all:
+    patch:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Notifications marked read }
+  /api/admin/dashboard:
+    get:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Dashboard metrics }
+  /api/admin/users/staff:
+    post:
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Staff created }

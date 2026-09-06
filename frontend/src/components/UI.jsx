@@ -32,7 +32,7 @@ export function CentreCard({ centre, onSelect }) {
 
 export function SlotCard({ slot, selected, onSelect }) {
   return <button className={`slot-card ${slot.recommended ? 'recommended' : ''} ${selected ? 'selected' : ''}`} onClick={() => onSelect(slot)}>
-    {slot.recommended && <span className="recommend-label">★ ML Recommendation (Demo)</span>}
+    {slot.recommended && <span className="recommend-label">Recommended availability</span>}
     <span className="slot-time">{slot.time}</span><span>Queue: <b>{slot.queue}</b></span><span>Expected wait: <b>{slot.wait}</b></span><span>Centre capacity: <b>{slot.capacity}</b></span>
     <span className="slot-radio">{selected && <Check size={15} />}</span>
   </button>;
