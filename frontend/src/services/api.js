@@ -20,6 +20,7 @@ export const api = {
   getCentreById: (id) => client.get(`/centres/${id}`).then(unwrap),
   getCommodities: () => client.get('/commodities').then(unwrap),
   getAvailableSlots: (params) => client.get('/slots', { params }).then(unwrap),
+  getAdminSlots: (params) => client.get('/admin/slots', { params }).then(unwrap),
   getSlot: (id) => client.get(`/slots/${id}`).then(unwrap),
   createBooking: (payload) => client.post('/bookings', payload).then(unwrap),
   getMyBookings: () => client.get('/bookings/my').then(unwrap),

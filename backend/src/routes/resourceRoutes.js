@@ -26,6 +26,7 @@ router.post('/staff/queue/:id/skip', authorize('staff', 'admin'), validate(skipS
 router.post('/admin/centres', authorize('admin'), validate(centreSchema), asyncHandler(controller.createCentre));
 router.patch('/admin/centres/:id', authorize('admin'), validate(centreSchema.partial()), asyncHandler(controller.updateCentre));
 router.patch('/admin/centres/:id/status', authorize('admin'), asyncHandler(controller.setCentreStatus));
+router.get('/admin/slots', authorize('admin'), asyncHandler(controller.listAdminSlots));
 router.post('/admin/commodities', authorize('admin'), validate(commoditySchema), asyncHandler(controller.createCommodity));
 router.patch('/admin/commodities/:id', authorize('admin'), validate(commoditySchema.partial()), asyncHandler(controller.updateCommodity));
 router.post('/admin/slots', authorize('admin'), validate(slotSchema), asyncHandler(controller.createSlot));

@@ -15,6 +15,7 @@ export const listCommodities = async (req, res) => success(res, req.user?.role =
 export const createCommodity = async (req, res) => success(res, await commodities.create(req.body, req.user), 201);
 export const updateCommodity = async (req, res) => success(res, await commodities.update(req.params.id, req.body, req.user));
 export const listSlots = async (req, res) => success(res, await slots.list(req.query));
+export const listAdminSlots = async (req, res) => success(res, await slots.listAdmin(req.query));
 export const getSlot = async (req, res) => success(res, await slots.get(req.params.id));
 export const createSlot = async (req, res) => success(res, await slots.create(req.body, req.user), 201);
 export const updateSlot = async (req, res) => success(res, await slots.update(req.params.id, req.body, req.user));

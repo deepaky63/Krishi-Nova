@@ -3,6 +3,7 @@ import { Booking, capacityStatuses } from '../../models/Booking.js';
 import { Centre } from '../../models/Centre.js';
 import { Commodity } from '../../models/Commodity.js';
 import { Slot } from '../../models/Slot.js';
+import { slotStart } from '../slotService.js';
 import { notFound, badRequest, forbidden } from '../../utils/errors.js';
 
 const active = { status: { $in: capacityStatuses } };
@@ -13,6 +14,7 @@ export async function create(input, farmer) {
     const [slot, centre, commodity] = await Promise.all([Slot.findOne({ _id: input.slotId, active: true }).session(session), Centre.findOne({ _id: input.centreId, status: 'active' }).session(session), Commodity.findOne({ _id: input.commodityId, active: true }).session(session)]);
     if (!slot || slot.centreId.toString() !== input.centreId || !slot.commodityIds.some((id) => id.toString() === input.commodityId)) throw badRequest('Selected slot is not available for this centre and commodity');
     if (!centre || !commodity) throw badRequest('Centre or commodity is not active');
+    if (new Date() >= new Date(slotStart(slot.date, slot.startTime).getTime() - slot.bookingCutoffMinutes * 60 * 1000)) throw badRequest('Booking cutoff has passed', 'BOOKING_CUTOFF');
     const duplicate = await Booking.findOne({ farmerId: farmer._id, ...active }).session(session); if (duplicate) throw badRequest('Farmer already has an active booking', 'ACTIVE_BOOKING_EXISTS');
     const count = await Booking.countDocuments({ slotId: slot._id, ...active }).session(session); if (count >= slot.maxFarmers) throw badRequest('Slot farmer capacity is full', 'SLOT_FULL');
     if (slot.maxQuantity !== undefined) { const total = await Booking.aggregate([{ $match: { slotId: slot._id, ...active } }, { $group: { _id: null, total: { $sum: '$bookedQuantity' } } }]).session(session); if ((total[0]?.total || 0) + input.bookedQuantity > slot.maxQuantity) throw badRequest('Slot quantity capacity is full', 'SLOT_QUANTITY_FULL'); }
