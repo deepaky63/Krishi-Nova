@@ -175,40 +175,163 @@ export function BookSlotPage() {
           </p>
         </div>
 
-        <section className="today-status" style={{ border: '1px solid #10b981', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)' }}>
-          <div className="today-status-top">
+        <section
+          className="today-status active-booking-card"
+          style={{
+            background: 'linear-gradient(135deg, #07351f 0%, #0b482b 55%, #0f673c 100%)',
+            border: '1px solid rgba(217, 143, 8, 0.35)',
+            boxShadow: '0 12px 32px rgba(7, 53, 31, 0.22), 0 2px 6px rgba(0, 0, 0, 0.08)',
+            color: '#ffffff',
+            borderRadius: 16,
+            padding: 26,
+            marginBottom: 30,
+            position: 'relative',
+            overflow: 'hidden'
+          }}
+        >
+          <div className="today-status-top" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
             <div>
-              <StatusBadge status={b.status} />
-              <h2 style={{ marginTop: 8 }}>Active Booking in Progress</h2>
-              <p>{centreName}</p>
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  padding: '5px 12px',
+                  borderRadius: 20,
+                  fontSize: '0.74rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.06em',
+                  background: 'rgba(255, 255, 255, 0.18)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                  marginBottom: 10
+                }}
+              >
+                <i style={{ width: 7, height: 7, borderRadius: '50%', background: '#facc15', display: 'inline-block' }} />
+                {String(b.status).replace('_', ' ')}
+              </span>
+              <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#ffffff', margin: '6px 0 4px', letterSpacing: '-0.02em', textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}>
+                Active Booking in Progress
+              </h2>
+              <p style={{ fontSize: '0.92rem', color: '#e0ebe1', margin: 0, fontWeight: 500 }}>
+                {centreName}
+              </p>
             </div>
-            <span className="token-chip">BOOKING <b>{b.bookingCode}</b></span>
+            <div
+              style={{
+                textAlign: 'center',
+                background: 'rgba(0, 0, 0, 0.25)',
+                border: '1px solid rgba(217, 143, 8, 0.45)',
+                borderRadius: 12,
+                padding: '10px 16px',
+                minWidth: 140
+              }}
+            >
+              <small style={{ display: 'block', fontSize: '0.66rem', letterSpacing: '0.12em', color: '#fef08a', fontWeight: 800, textTransform: 'uppercase' }}>
+                BOOKING ID
+              </small>
+              <b style={{ display: 'block', fontSize: '1.15rem', color: '#ffffff', letterSpacing: '-0.01em', marginTop: 3, fontWeight: 800 }}>
+                {b.bookingCode}
+              </b>
+            </div>
           </div>
-          <div className="today-details">
-            <div>
-              <MapPin />
+
+          <div
+            className="today-details"
+            style={{
+              borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+              marginTop: 22,
+              paddingTop: 18,
+              display: 'flex',
+              flexWrap: 'wrap',
+              alignItems: 'center',
+              gap: 24
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 180 }}>
+              <span style={{ color: '#facc15', display: 'grid', placeItems: 'center' }}>
+                <MapPin size={22} />
+              </span>
               <span>
-                <small>Procurement Centre</small>
-                <b>{centreName}</b>
+                <small style={{ display: 'block', color: '#bbf7d0', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Procurement Centre
+                </small>
+                <b style={{ display: 'block', color: '#ffffff', fontSize: '0.92rem', fontWeight: 700, marginTop: 1 }}>
+                  {centreName}
+                </b>
               </span>
             </div>
-            <div>
-              <Clock3 />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
+              <span style={{ color: '#facc15', display: 'grid', placeItems: 'center' }}>
+                <Clock3 size={22} />
+              </span>
               <span>
-                <small>Date &amp; Slot</small>
-                <b>{formatDate(b.bookingDate)} ({slotTime})</b>
+                <small style={{ display: 'block', color: '#bbf7d0', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Date &amp; Slot
+                </small>
+                <b style={{ display: 'block', color: '#ffffff', fontSize: '0.92rem', fontWeight: 700, marginTop: 1 }}>
+                  {formatDate(b.bookingDate)} ({slotTime})
+                </b>
               </span>
             </div>
-            <div>
-              <Wheat />
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
+              <span style={{ color: '#facc15', display: 'grid', placeItems: 'center' }}>
+                <Wheat size={22} />
+              </span>
               <span>
-                <small>Commodity &amp; Quantity</small>
-                <b>{commodityTitle} · {b.bookedQuantity} {b.quantityUnit || 'kg'}</b>
+                <small style={{ display: 'block', color: '#bbf7d0', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Commodity &amp; Quantity
+                </small>
+                <b style={{ display: 'block', color: '#ffffff', fontSize: '0.92rem', fontWeight: 700, marginTop: 1 }}>
+                  {commodityTitle} · {b.bookedQuantity} {b.quantityUnit || 'kg'}
+                </b>
               </span>
             </div>
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-              <Button to="/farmer/booking">View booking details</Button>
-              <Button to="/farmer/queue" variant="secondary">Live queue</Button>
+
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginLeft: 'auto' }}>
+              <Link
+                to="/farmer/booking"
+                style={{
+                  background: '#ffffff',
+                  color: '#07351f',
+                  fontWeight: 750,
+                  fontSize: '0.82rem',
+                  padding: '10px 18px',
+                  borderRadius: 9,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  textDecoration: 'none',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                  transition: '0.2s ease'
+                }}
+              >
+                View booking details
+                <ChevronRight size={16} />
+              </Link>
+              <Link
+                to="/farmer/queue"
+                style={{
+                  background: 'rgba(255, 255, 255, 0.12)',
+                  color: '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.45)',
+                  fontWeight: 750,
+                  fontSize: '0.82rem',
+                  padding: '10px 18px',
+                  borderRadius: 9,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  textDecoration: 'none',
+                  transition: '0.2s ease'
+                }}
+              >
+                Live queue
+                <ChevronRight size={16} />
+              </Link>
             </div>
           </div>
         </section>
