@@ -27,6 +27,7 @@ export const api = {
   getBooking: (id) => client.get(`/bookings/${id}`).then(unwrap),
   cancelBooking: (id, reason) => client.post(`/bookings/${id}/cancel`, { reason }).then(unwrap),
   getQueue: (params) => client.get('/staff/queue', { params }).then(unwrap),
+  getStaffBookings: (params) => client.get('/staff/bookings', { params }).then(unwrap),
   getBookingQueue: (bookingId) => client.get(`/bookings/${bookingId}/queue`).then(unwrap),
   checkIn: (bookingId) => client.post(`/staff/bookings/${bookingId}/check-in`).then(unwrap),
   updateQueueStatus: (id, status) => client.patch(`/staff/queue/${id}/status`, { status }).then(unwrap),

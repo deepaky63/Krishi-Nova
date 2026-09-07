@@ -26,14 +26,27 @@ export function FarmerDashboard() {
   return <div className="dashboard-page farmer-dashboard"><div className="welcome-row"><div><span className="eyebrow">WELCOME, {user?.name?.toUpperCase() || 'FARMER'}</span><h2>Your procurement day, made simpler.</h2><p>{booking ? 'Here is the latest on your confirmed booking.' : 'You do not have an active booking yet.'}</p></div><Button to="/farmer/book-slot">Book new slot</Button></div>{booking ? <section className="today-status"><div className="today-status-top"><div><StatusBadge status={booking.status} /><h2>Current procurement status</h2><p>{booking.centreId?.name || 'Selected procurement centre'}</p></div><span className="token-chip">BOOKING <b>{booking.bookingCode}</b></span></div><div className="today-details"><div><MapPin /><span><small>Centre</small><b>{booking.centreId?.name || booking.centreId}</b></span></div><div><Clock3 /><span><small>Date</small><b>{formatDate(booking.bookingDate)}</b></span></div><div><Wheat /><span><small>Quantity</small><b>{booking.bookedQuantity} {booking.quantityUnit} {booking.commodityName ? `(${booking.commodityName})` : booking.commodityId?.name ? `(${booking.commodityId.name})` : ''}</b></span></div><Button to="/farmer/queue" variant="secondary">View live queue</Button></div></section> : <div className="empty-state"><Sprout size={30} /><h3>No active booking</h3><p>Choose a centre, commodity and available slot to begin.</p></div>}<section><SectionTitle eyebrow="QUICK ACTIONS" title="Everything important, in one place" /><div className="farmer-action-grid">{farmerActions.map(([Icon, title, text, to]) => <Link to={to} className="farmer-action" key={title}><span><Icon size={22} /></span><div><b>{title}</b><p>{text}</p></div><ChevronRight size={19} /></Link>)}</div></section></div>;
 }
 
+const activeStatuses = ['booked', 'checked_in', 'quality_check', 'weighed', 'accepted', 'partially_accepted'];
+
 export function BookSlotPage() {
   const navigate = useNavigate(); const { notify, setBooking } = useApp();
   const [commodities, setCommodities] = useState([]); const [centres, setCentres] = useState([]); const [slots, setSlots] = useState([]);
   const [commodity, setCommodity] = useState(null); const [centre, setCentre] = useState(null); const [slot, setSlot] = useState(null); const [quantity, setQuantity] = useState(''); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false);
   const [centreSearch, setCentreSearch] = useState('');
+  const [existingActiveBooking, setExistingActiveBooking] = useState(null);
   
   useEffect(() => {
-    Promise.all([api.getCommodities(), api.getCentres(), api.getAvailableSlots()]).then(([commodityData, centreData, slotData]) => {
+    Promise.all([
+      api.getCommodities(),
+      api.getCentres(),
+      api.getAvailableSlots(),
+      api.getMyBookings().catch(() => [])
+    ]).then(([commodityData, centreData, slotData, myBookingsData]) => {
+      const active = (myBookingsData || []).find((b) => activeStatuses.includes(b.status));
+      if (active) {
+        setExistingActiveBooking(active);
+      }
+
       const rawCommodities = commodityData || [];
       const nextCentres = centreData.items || centreData || [];
       const nextSlots = slotData || [];
@@ -109,6 +122,9 @@ export function BookSlotPage() {
   });
 
   const book = async () => {
+    if (existingActiveBooking) {
+      return notify('You already have an active procurement booking. Please complete or cancel your existing booking before booking another slot.', 'error');
+    }
     if (!commodity || !centre || !slot || !quantity) return notify('Select a commodity, centre, slot and quantity.', 'error');
     setSaving(true);
     try {
@@ -127,13 +143,79 @@ export function BookSlotPage() {
       notify('Your booking has been created.');
       navigate('/farmer/booking');
     } catch (error) {
-      notify(errorText(error), 'error');
+      const msg = error.response?.data?.message || errorText(error);
+      notify(msg, 'error');
+      if (error.response?.data?.error?.code === 'ACTIVE_BOOKING_EXISTS' || msg.toLowerCase().includes('already have an active')) {
+        api.getMyBookings().then((myBookings) => {
+          const active = (myBookings || []).find((b) => activeStatuses.includes(b.status));
+          if (active) setExistingActiveBooking(active);
+        }).catch(() => {});
+      }
     } finally {
       setSaving(false);
     }
   };
 
   if (loading) return <div className="dashboard-page"><LoadingSpinner /></div>;
+
+  if (existingActiveBooking) {
+    const b = existingActiveBooking;
+    const centreName = b.centreId?.name || b.centreId || 'Procurement Centre';
+    const commodityTitle = b.commodityName || b.commodityId?.name || 'Procurement Commodity';
+    const slotTime = b.slotId?.startTime ? `${b.slotId.startTime} – ${b.slotId.endTime}` : (b.slotTime || 'Assigned slot');
+
+    return (
+      <div className="dashboard-page booking-page">
+        <div className="page-intro">
+          <span className="eyebrow">ACTIVE PROCUREMENT DETECTED</span>
+          <h2>You already have an active booking</h2>
+          <p>
+            To prevent congestion and ensure fair access, each farmer may hold only one active procurement booking at a time.
+            Please complete or cancel your existing booking before booking another slot.
+          </p>
+        </div>
+
+        <section className="today-status" style={{ border: '1px solid #10b981', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.08) 0%, rgba(255, 255, 255, 0.95) 100%)' }}>
+          <div className="today-status-top">
+            <div>
+              <StatusBadge status={b.status} />
+              <h2 style={{ marginTop: 8 }}>Active Booking in Progress</h2>
+              <p>{centreName}</p>
+            </div>
+            <span className="token-chip">BOOKING <b>{b.bookingCode}</b></span>
+          </div>
+          <div className="today-details">
+            <div>
+              <MapPin />
+              <span>
+                <small>Procurement Centre</small>
+                <b>{centreName}</b>
+              </span>
+            </div>
+            <div>
+              <Clock3 />
+              <span>
+                <small>Date &amp; Slot</small>
+                <b>{formatDate(b.bookingDate)} ({slotTime})</b>
+              </span>
+            </div>
+            <div>
+              <Wheat />
+              <span>
+                <small>Commodity &amp; Quantity</small>
+                <b>{commodityTitle} · {b.bookedQuantity} {b.quantityUnit || 'kg'}</b>
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+              <Button to="/farmer/booking">View booking details</Button>
+              <Button to="/farmer/queue" variant="secondary">Live queue</Button>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
+
   return <div className="dashboard-page booking-page">
     <div className="page-intro">
       <span className="eyebrow">SLOT BOOKING</span>

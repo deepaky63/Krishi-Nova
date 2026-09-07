@@ -59,7 +59,12 @@ export async function create(input, farmer) {
         throw badRequest('Booking cutoff has passed', 'BOOKING_CUTOFF');
       }
       const duplicate = await Booking.findOne({ farmerId: farmer._id, ...active }).session(session);
-      if (duplicate) throw badRequest('Farmer already has an active booking', 'ACTIVE_BOOKING_EXISTS');
+      if (duplicate) {
+        throw badRequest(
+          'You already have an active procurement booking. Please complete or cancel your existing booking before booking another slot.',
+          'ACTIVE_BOOKING_EXISTS'
+        );
+      }
       const count = await Booking.countDocuments({ slotId: slot._id, ...active }).session(session);
       if (count >= slot.maxFarmers) throw badRequest('Slot farmer capacity is full', 'SLOT_FULL');
       if (slot.maxQuantity !== undefined) {
@@ -80,11 +85,53 @@ export async function create(input, farmer) {
       result = created[0];
     });
     return result;
+  } catch (err) {
+    if (err.code === 11000 && err.keyPattern?.farmerId) {
+      throw badRequest(
+        'You already have an active procurement booking. Please complete or cancel your existing booking before booking another slot.',
+        'ACTIVE_BOOKING_EXISTS'
+      );
+    }
+    throw err;
   } finally {
     await session.endSession();
   }
 }
 
 export const mine = (farmerId) => Booking.find({ farmerId }).populate('centreId slotId commodityId').sort({ createdAt: -1 });
-export async function get(id, user) { const item = await Booking.findById(id).populate('centreId slotId commodityId farmerId'); if (!item) throw notFound('Booking not found'); if (user.role === 'farmer' && item.farmerId._id.toString() !== user._id.toString()) throw forbidden(); if (user.role === 'staff' && !user.assignedCentreIds.some((centreId) => centreId.toString() === item.centreId._id.toString())) throw forbidden(); return item; }
+
+export async function listStaffBookings(query, user) {
+  const filter = {};
+  if (user.role === 'staff') {
+    const staffCentres = (user.assignedCentreIds || []).map((id) => (id._id || id).toString());
+    if (query.centreId) {
+      const qId = (query.centreId._id || query.centreId).toString();
+      if (!staffCentres.includes(qId)) throw forbidden('You are not assigned to this centre');
+      filter.centreId = qId;
+    } else {
+      filter.centreId = { $in: user.assignedCentreIds };
+    }
+  } else if (query.centreId) {
+    filter.centreId = query.centreId._id || query.centreId;
+  }
+
+  if (query.status) {
+    filter.status = query.status;
+  } else if (query.active === 'true') {
+    filter.status = { $in: capacityStatuses };
+  }
+
+  if (query.date) {
+    const d = new Date(query.date);
+    const nextD = new Date(d);
+    nextD.setDate(nextD.getDate() + 1);
+    filter.bookingDate = { $gte: d, $lt: nextD };
+  }
+
+  return Booking.find(filter)
+    .populate('centreId slotId commodityId farmerId')
+    .sort({ bookingDate: 1, createdAt: -1 });
+}
+
+export async function get(id, user) { const item = await Booking.findById(id).populate('centreId slotId commodityId farmerId'); if (!item) throw notFound('Booking not found'); if (user.role === 'farmer' && item.farmerId._id.toString() !== user._id.toString()) throw forbidden(); if (user.role === 'staff' && !user.assignedCentreIds.some((centreId) => (centreId._id || centreId).toString() === (item.centreId._id || item.centreId).toString())) throw forbidden(); return item; }
 export async function cancel(id, user, reason) { const item = await get(id, user); if (user.role === 'farmer' && new Date() >= new Date(item.bookingDate.getTime() - 60 * 60 * 1000)) throw badRequest('Booking cancellation cutoff has passed', 'CANCELLATION_CUTOFF'); if (!capacityStatuses.includes(item.status)) throw badRequest('Booking cannot be cancelled in its current status'); item.status = 'cancelled'; item.cancelledAt = new Date(); item.cancelledBy = user._id; item.cancellationReason = reason; await item.save(); return item; }

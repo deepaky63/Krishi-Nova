@@ -21,6 +21,7 @@ router.get('/bookings/:id/queue', asyncHandler(controller.getBookingQueue));
 router.get('/bookings/:id', asyncHandler(controller.getBooking));
 router.post('/bookings/:id/cancel', authorize('farmer', 'staff', 'admin'), validate(cancelSchema), asyncHandler(controller.cancelBooking));
 router.get('/staff/queue', authorize('staff', 'admin'), asyncHandler(controller.listQueue));
+router.get('/staff/bookings', authorize('staff', 'admin'), asyncHandler(controller.listStaffBookings));
 router.post('/staff/bookings/:bookingId/check-in', authorize('staff', 'admin'), asyncHandler(controller.checkIn));
 router.patch('/staff/queue/:id/status', authorize('staff', 'admin'), validate(queueStatusSchema), asyncHandler(controller.updateQueue));
 router.post('/staff/queue/:id/skip', authorize('staff', 'admin'), validate(skipSchema), asyncHandler(controller.skipQueue));
