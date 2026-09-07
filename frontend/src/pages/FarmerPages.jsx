@@ -1,4 +1,4 @@
-import { Bell, CalendarCheck2, Check, CheckCircle2, ChevronRight, CircleDollarSign, Clock3, FileCheck2, MapPin, Radio, ReceiptText, Sprout, UsersRound, Wheat } from 'lucide-react';
+import { AlertTriangle, Bell, CalendarCheck2, Check, CheckCircle2, ChevronRight, CircleDollarSign, Clock3, FileCheck2, MapPin, Radio, ReceiptText, Sprout, UsersRound, Wheat, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, LoadingSpinner, SectionTitle, SlotCard, StatusBadge, Timeline } from '../components/UI';
@@ -34,6 +34,7 @@ export function BookSlotPage() {
   const [commodity, setCommodity] = useState(null); const [centre, setCentre] = useState(null); const [slot, setSlot] = useState(null); const [quantity, setQuantity] = useState(''); const [loading, setLoading] = useState(true); const [saving, setSaving] = useState(false);
   const [centreSearch, setCentreSearch] = useState('');
   const [existingActiveBooking, setExistingActiveBooking] = useState(null);
+  const [queueInfo, setQueueInfo] = useState(null);
   
   useEffect(() => {
     Promise.all([
@@ -45,6 +46,11 @@ export function BookSlotPage() {
       const active = (myBookingsData || []).find((b) => activeStatuses.includes(b.status));
       if (active) {
         setExistingActiveBooking(active);
+        api.getBookingQueue(active._id).then((qData) => {
+          if (Array.isArray(qData) && qData.length > 0) {
+            setQueueInfo(qData[0]);
+          }
+        }).catch(() => {});
       }
 
       const rawCommodities = commodityData || [];
@@ -163,171 +169,131 @@ export function BookSlotPage() {
     const centreName = b.centreId?.name || b.centreId || 'Procurement Centre';
     const commodityTitle = b.commodityName || b.commodityId?.name || 'Procurement Commodity';
     const slotTime = b.slotId?.startTime ? `${b.slotId.startTime} – ${b.slotId.endTime}` : (b.slotTime || 'Assigned slot');
+    const isCheckedIn = ['checked_in', 'processing', 'weighed', 'quality_check'].includes(b.status);
 
     return (
       <div className="dashboard-page booking-page">
         <div className="page-intro">
-          <span className="eyebrow">ACTIVE PROCUREMENT DETECTED</span>
-          <h2>You already have an active booking</h2>
-          <p>
+          <span className="eyebrow" style={{ color: '#0f673c', fontWeight: 800 }}>ACTIVE PROCUREMENT DETECTED</span>
+          <h2 style={{ color: '#07351f', fontWeight: 800 }}>You already have an active booking</h2>
+          <p style={{ color: '#334e3e', fontSize: '0.94rem' }}>
             To prevent congestion and ensure fair access, each farmer may hold only one active procurement booking at a time.
             Please complete or cancel your existing booking before booking another slot.
           </p>
         </div>
 
-        <section
-          className="today-status active-booking-card"
-          style={{
-            background: 'linear-gradient(135deg, #07351f 0%, #0b482b 55%, #0f673c 100%)',
-            border: '1px solid rgba(217, 143, 8, 0.35)',
-            boxShadow: '0 12px 32px rgba(7, 53, 31, 0.22), 0 2px 6px rgba(0, 0, 0, 0.08)',
-            color: '#ffffff',
-            borderRadius: 16,
-            padding: 26,
-            marginBottom: 30,
-            position: 'relative',
-            overflow: 'hidden'
-          }}
-        >
-          <div className="today-status-top" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 20 }}>
+        <section className="active-booking-card">
+          <div className="active-booking-header">
             <div>
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  padding: '5px 12px',
-                  borderRadius: 20,
-                  fontSize: '0.74rem',
-                  fontWeight: 800,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.06em',
-                  background: 'rgba(255, 255, 255, 0.18)',
-                  color: '#ffffff',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  marginBottom: 10
-                }}
-              >
-                <i style={{ width: 7, height: 7, borderRadius: '50%', background: '#facc15', display: 'inline-block' }} />
-                {String(b.status).replace('_', ' ')}
-              </span>
-              <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#ffffff', margin: '6px 0 4px', letterSpacing: '-0.02em', textShadow: '0 1px 2px rgba(0,0,0,0.25)' }}>
-                Active Booking in Progress
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span className="active-booking-status-badge">
+                  <i className="active-booking-status-dot" />
+                  {String(b.status).replace('_', ' ')}
+                </span>
+                {queueInfo?.queueNumber && (
+                  <span
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      padding: '5px 12px',
+                      borderRadius: 20,
+                      fontSize: '0.76rem',
+                      fontWeight: 800,
+                      background: '#fef08a',
+                      color: '#713f12',
+                      border: '1px solid #facc15',
+                      marginBottom: 12
+                    }}
+                  >
+                    TOKEN: <b>{queueInfo.queueNumber}</b>
+                  </span>
+                )}
+              </div>
+              <h2 className="active-booking-title">
+                {isCheckedIn ? 'Checked in to operational queue' : 'Your booking is confirmed'}
               </h2>
-              <p style={{ fontSize: '0.92rem', color: '#e0ebe1', margin: 0, fontWeight: 500 }}>
+              <p className="active-booking-centre-sub">
                 {centreName}
               </p>
+              {queueInfo?.farmersAhead != null && (
+                <div className="active-booking-queue-pill">
+                  <UsersRound size={16} />
+                  <span>
+                    {queueInfo.farmersAhead === 0 ? (
+                      <><b>You're next</b> — 0 farmers ahead of you</>
+                    ) : (
+                      <>Queue Position <b>#{queueInfo.queuePosition}</b> · <b>{queueInfo.farmersAhead}</b> farmer{queueInfo.farmersAhead === 1 ? '' : 's'} ahead of you</>
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
-            <div
-              style={{
-                textAlign: 'center',
-                background: 'rgba(0, 0, 0, 0.25)',
-                border: '1px solid rgba(217, 143, 8, 0.45)',
-                borderRadius: 12,
-                padding: '10px 16px',
-                minWidth: 140
-              }}
-            >
-              <small style={{ display: 'block', fontSize: '0.66rem', letterSpacing: '0.12em', color: '#fef08a', fontWeight: 800, textTransform: 'uppercase' }}>
+
+            <div className="active-booking-id-box">
+              <span className="active-booking-id-label">
                 BOOKING ID
-              </small>
-              <b style={{ display: 'block', fontSize: '1.15rem', color: '#ffffff', letterSpacing: '-0.01em', marginTop: 3, fontWeight: 800 }}>
+              </span>
+              <span className="active-booking-id-value">
                 {b.bookingCode}
-              </b>
+              </span>
             </div>
           </div>
 
-          <div
-            className="today-details"
-            style={{
-              borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-              marginTop: 22,
-              paddingTop: 18,
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              gap: 24
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 180 }}>
-              <span style={{ color: '#facc15', display: 'grid', placeItems: 'center' }}>
-                <MapPin size={22} />
+          <div className="active-booking-grid">
+            <div className="active-booking-item">
+              <span className="active-booking-icon">
+                <MapPin size={24} />
               </span>
-              <span>
-                <small style={{ display: 'block', color: '#bbf7d0', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div>
+                <small className="active-booking-label">
                   Procurement Centre
                 </small>
-                <b style={{ display: 'block', color: '#ffffff', fontSize: '0.92rem', fontWeight: 700, marginTop: 1 }}>
+                <b className="active-booking-val">
                   {centreName}
                 </b>
-              </span>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
-              <span style={{ color: '#facc15', display: 'grid', placeItems: 'center' }}>
-                <Clock3 size={22} />
+            <div className="active-booking-item">
+              <span className="active-booking-icon">
+                <Clock3 size={24} />
               </span>
-              <span>
-                <small style={{ display: 'block', color: '#bbf7d0', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div>
+                <small className="active-booking-label">
                   Date &amp; Slot
                 </small>
-                <b style={{ display: 'block', color: '#ffffff', fontSize: '0.92rem', fontWeight: 700, marginTop: 1 }}>
+                <b className="active-booking-val">
                   {formatDate(b.bookingDate)} ({slotTime})
                 </b>
-              </span>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 200 }}>
-              <span style={{ color: '#facc15', display: 'grid', placeItems: 'center' }}>
-                <Wheat size={22} />
+            <div className="active-booking-item">
+              <span className="active-booking-icon">
+                <Wheat size={24} />
               </span>
-              <span>
-                <small style={{ display: 'block', color: '#bbf7d0', fontSize: '0.7rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              <div>
+                <small className="active-booking-label">
                   Commodity &amp; Quantity
                 </small>
-                <b style={{ display: 'block', color: '#ffffff', fontSize: '0.92rem', fontWeight: 700, marginTop: 1 }}>
+                <b className="active-booking-val">
                   {commodityTitle} · {b.bookedQuantity} {b.quantityUnit || 'kg'}
                 </b>
-              </span>
+              </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginLeft: 'auto' }}>
+            <div className="active-booking-actions">
               <Link
                 to="/farmer/booking"
-                style={{
-                  background: '#ffffff',
-                  color: '#07351f',
-                  fontWeight: 750,
-                  fontSize: '0.82rem',
-                  padding: '10px 18px',
-                  borderRadius: 9,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  textDecoration: 'none',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                  transition: '0.2s ease'
-                }}
+                className="active-booking-btn-primary"
               >
                 View booking details
                 <ChevronRight size={16} />
               </Link>
               <Link
                 to="/farmer/queue"
-                style={{
-                  background: 'rgba(255, 255, 255, 0.12)',
-                  color: '#ffffff',
-                  border: '1px solid rgba(255, 255, 255, 0.45)',
-                  fontWeight: 750,
-                  fontSize: '0.82rem',
-                  padding: '10px 18px',
-                  borderRadius: 9,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  textDecoration: 'none',
-                  transition: '0.2s ease'
-                }}
+                className="active-booking-btn-secondary"
               >
                 Live queue
                 <ChevronRight size={16} />
@@ -521,22 +487,29 @@ export function QueuePage() {
 
   const isCheckedIn = items.length > 0;
   const currentToken = items[0];
-  const activeStatus = currentToken ? currentToken.status : booking.status;
+  const isRejected = booking.status === 'rejected' || currentToken?.procurement?.status === 'rejected';
+  const isCompleted = booking.status === 'completed' || currentToken?.status === 'served' || currentToken?.procurement?.status === 'completed';
+  const activeStatus = isRejected ? 'rejected' : (isCompleted ? 'completed' : (currentToken ? currentToken.status : booking.status));
+
+  // Rejection reason from procurement audit record or booking
+  const rejectionReason = currentToken?.procurement?.rejectionReason || booking.cancellationReason || 'Quality parameters not satisfied (e.g. high moisture content)';
 
   // Queue position and farmers ahead calculation from operational queue entry
-  const queuePos = currentToken?.queuePosition;
-  const farmersAhead = currentToken?.farmersAhead;
+  const queuePos = (isRejected || isCompleted) ? null : currentToken?.queuePosition;
+  const farmersAhead = (isRejected || isCompleted) ? 0 : (currentToken?.farmersAhead ?? (isCheckedIn ? 0 : null));
 
   // Determine formal message
   let formalMessage = '';
-  if (booking.status === 'cancelled' || activeStatus === 'cancelled') {
+  if (isRejected) {
+    formalMessage = `Procurement Rejected. Rejection reason: ${rejectionReason}`;
+  } else if (isCompleted) {
+    formalMessage = 'Procurement Completed Successfully. Your crop has been inspected, weighed, and accepted.';
+  } else if (booking.status === 'cancelled' || activeStatus === 'cancelled') {
     formalMessage = 'This booking has been cancelled.';
   } else if (booking.status === 'no_show' || activeStatus === 'no_show') {
     formalMessage = 'You were marked as no-show for this booking. Please contact the procurement centre if you need assistance.';
-  } else if (activeStatus === 'served' || booking.status === 'completed') {
-    formalMessage = 'Your procurement has been completed successfully.';
-  } else if (activeStatus === 'processing') {
-    formalMessage = 'Your procurement is currently being processed. Please follow the instructions from centre staff.';
+  } else if (activeStatus === 'processing' || activeStatus === 'quality_check') {
+    formalMessage = 'Your procurement is currently being processed at the counter. Please follow instructions from centre staff.';
   } else if (activeStatus === 'checked_in') {
     if (farmersAhead === 0) {
       formalMessage = 'You have checked in successfully. You are next in line. Please remain available.';
@@ -593,6 +566,96 @@ export function QueuePage() {
         </div>
       </section>
 
+      {/* Prominent Outcome Notice for Rejected / Completed */}
+      {isRejected && (
+        <section
+          style={{
+            background: '#fef2f2',
+            border: '2px solid #f87171',
+            borderRadius: 16,
+            padding: '20px 24px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 16,
+            boxShadow: '0 4px 16px rgba(220, 38, 38, 0.08)'
+          }}
+        >
+          <div style={{ color: '#dc2626', marginTop: 2, flexShrink: 0 }}>
+            <XCircle size={28} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ margin: 0, color: '#991b1b', fontSize: '1.2rem', fontWeight: 800 }}>
+                Procurement Rejected
+              </h3>
+              <span style={{ fontSize: '0.8rem', background: '#fee2e2', color: '#b91c1c', fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>
+                Inspection Failed
+              </span>
+            </div>
+            <p style={{ margin: '8px 0 4px', color: '#b91c1c', fontSize: '1rem', fontWeight: 700 }}>
+              Rejection reason: <span style={{ color: '#7f1d1d', fontWeight: 800 }}>{rejectionReason}</span>
+            </p>
+            {currentToken?.procurement?.qualityRemarks && (
+              <p style={{ margin: '4px 0 8px', color: '#7f1d1d', fontSize: '0.85rem' }}>
+                <strong>Staff remarks:</strong> {currentToken.procurement.qualityRemarks}
+              </p>
+            )}
+            <div style={{ marginTop: 8, display: 'flex', gap: 20, fontSize: '0.82rem', color: '#64748b' }}>
+              <span>Farmers ahead: <strong style={{ color: '#1e293b' }}>0</strong></span>
+              <span>Active queue status: <strong style={{ color: '#dc2626' }}>Removed from active queue</strong></span>
+              <span>Settlement: <strong style={{ color: '#64748b' }}>Ineligible</strong></span>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {isCompleted && (
+        <section
+          style={{
+            background: '#f0fdf4',
+            border: '2px solid #4ade80',
+            borderRadius: 16,
+            padding: '20px 24px',
+            marginBottom: 20,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 16,
+            boxShadow: '0 4px 16px rgba(16, 185, 129, 0.08)'
+          }}
+        >
+          <div style={{ color: '#16a34a', marginTop: 2, flexShrink: 0 }}>
+            <CheckCircle2 size={28} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ margin: 0, color: '#14532d', fontSize: '1.2rem', fontWeight: 800 }}>
+                Procurement Completed Successfully
+              </h3>
+              <span style={{ fontSize: '0.8rem', background: '#dcfce7', color: '#15803d', fontWeight: 700, padding: '4px 10px', borderRadius: 20 }}>
+                Weighed &amp; Accepted
+              </span>
+            </div>
+            <p style={{ margin: '8px 0 4px', color: '#166534', fontSize: '0.95rem' }}>
+              Your crop lot has been verified, weighed, and procured by centre staff.
+            </p>
+            <div style={{ marginTop: 10, display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: '0.82rem', color: '#15803d' }}>
+              <span>Accepted: <strong>{currentToken?.procurement?.acceptedQuantity ?? booking.bookedQuantity} {booking.quantityUnit || 'kg'}</strong></span>
+              {currentToken?.procurement?.rejectedQuantity > 0 && (
+                <span>Rejected / Deducted: <strong>{currentToken.procurement.rejectedQuantity} {booking.quantityUnit || 'kg'}</strong></span>
+              )}
+              <span>Grade: <strong>{currentToken?.procurement?.qualityGrade || 'Grade A'}</strong></span>
+              <span>Farmers ahead: <strong>0</strong></span>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <Link to="/farmer/payment" style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0f673c', textDecoration: 'underline' }}>
+                View settlement &amp; payment disbursement status &rarr;
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Prominent Real-Time Queue Position Display */}
       <section
         className="queue-position-card"
@@ -621,34 +684,42 @@ export function QueuePage() {
             className="eyebrow"
             style={{ marginBottom: 4, letterSpacing: '0.1em', fontSize: '0.7rem' }}
           >
-            {activeStatus === 'processing' ? 'IN SERVICE' : isCheckedIn ? 'QUEUE POSITION' : 'BOOKING STATUS'}
+            {isRejected ? 'FINAL OUTCOME' : isCompleted ? 'PROCUREMENT OUTCOME' : (activeStatus === 'processing' || activeStatus === 'quality_check' ? 'IN SERVICE' : isCheckedIn ? 'QUEUE POSITION' : 'BOOKING STATUS')}
           </span>
           <div
             style={{
-              fontSize: '2.8rem',
+              fontSize: isRejected || isCompleted ? '2.1rem' : '2.8rem',
               fontWeight: 800,
               lineHeight: 1.05,
-              color: activeStatus === 'processing' ? '#2563eb' : (isCheckedIn ? '#0f673c' : '#1e293b'),
+              color: isRejected ? '#dc2626' : (isCompleted ? '#059669' : (activeStatus === 'processing' || activeStatus === 'quality_check' ? '#2563eb' : (isCheckedIn ? '#0f673c' : '#1e293b'))),
               letterSpacing: '-0.04em'
             }}
           >
-            {activeStatus === 'processing'
-              ? 'NOW'
-              : (isCheckedIn && queuePos != null ? `#${queuePos}` : (isCheckedIn && currentToken.queueNumber ? currentToken.queueNumber : 'CONFIRMED'))}
+            {isRejected
+              ? 'REJECTED'
+              : isCompleted
+                ? 'COMPLETED'
+                : (activeStatus === 'processing' || activeStatus === 'quality_check'
+                  ? 'NOW'
+                  : (isCheckedIn && queuePos != null ? `#${queuePos}` : (isCheckedIn && currentToken?.queueNumber ? currentToken.queueNumber : 'CONFIRMED')))}
           </div>
           <div
             style={{
               fontSize: '0.85rem',
               fontWeight: 700,
-              color: activeStatus === 'processing' ? '#2563eb' : (farmersAhead === 0 ? '#059669' : '#d97706'),
+              color: isRejected ? '#dc2626' : (isCompleted ? '#059669' : (activeStatus === 'processing' || activeStatus === 'quality_check' ? '#2563eb' : (farmersAhead === 0 ? '#059669' : '#d97706'))),
               marginTop: 6
             }}
           >
-            {activeStatus === 'processing'
-              ? 'Currently processing'
-              : isCheckedIn && farmersAhead != null
-                ? (farmersAhead === 0 ? "You're next in line" : `${farmersAhead} farmers ahead of you`)
-                : (isCheckedIn ? 'In queue' : 'Awaiting check-in')}
+            {isRejected
+              ? 'Lot rejected'
+              : isCompleted
+                ? 'Served & processed'
+                : (activeStatus === 'processing' || activeStatus === 'quality_check'
+                  ? 'Currently processing'
+                  : isCheckedIn && farmersAhead != null
+                    ? (farmersAhead === 0 ? "You're next in line" : `${farmersAhead} farmers ahead of you`)
+                    : (isCheckedIn ? 'In queue' : 'Awaiting check-in'))}
           </div>
         </div>
 
@@ -662,7 +733,7 @@ export function QueuePage() {
               fontWeight: 800,
               textTransform: 'uppercase',
               letterSpacing: '0.08em',
-              color: '#0f673c',
+              color: isRejected ? '#dc2626' : '#0f673c',
               marginBottom: 6
             }}
           >
@@ -689,9 +760,9 @@ export function QueuePage() {
               color: '#64748b'
             }}
           >
-            <span>Token: <strong style={{ color: '#0f673c' }}>{currentToken?.queueNumber || 'Pending check-in'}</strong></span>
-            <span>Est. Wait: <strong style={{ color: '#1e293b' }}>{currentToken?.estimatedWaitMinutes != null ? `${currentToken.estimatedWaitMinutes} min` : 'Calculated at entry'}</strong></span>
-            <span>Total Active in Queue: <strong style={{ color: '#1e293b' }}>{currentToken?.totalActiveInQueue || (isCheckedIn ? 1 : 0)}</strong></span>
+            <span>Token: <strong style={{ color: isRejected ? '#dc2626' : '#0f673c' }}>{currentToken?.queueNumber || (isCheckedIn ? 'Assigned' : 'Pending check-in')}</strong></span>
+            <span>Est. Wait: <strong style={{ color: '#1e293b' }}>{isRejected || isCompleted ? '0 min' : (currentToken?.estimatedWaitMinutes != null ? `${currentToken.estimatedWaitMinutes} min` : 'Calculated at entry')}</strong></span>
+            <span>Total Active in Queue: <strong style={{ color: '#1e293b' }}>{currentToken?.totalActiveInQueue || (isCheckedIn && !isRejected && !isCompleted ? 1 : 0)}</strong></span>
           </div>
         </div>
       </section>
@@ -699,29 +770,29 @@ export function QueuePage() {
       <div className="queue-overview">
         <div className="queue-stat">
           <small>{isCheckedIn ? 'Queue Token' : 'Current Status'}</small>
-          <strong>{isCheckedIn ? currentToken.queueNumber : 'CONFIRMED'}</strong>
+          <strong>{isCheckedIn ? currentToken?.queueNumber : 'CONFIRMED'}</strong>
           <span>{isCheckedIn ? 'Assigned at check-in' : 'Awaiting arrival at centre'}</span>
         </div>
         <div className="queue-stat">
           <small>Farmers Ahead</small>
           <strong>
-            {isCheckedIn && farmersAhead != null ? farmersAhead : (isCheckedIn ? 0 : '—')}
+            {farmersAhead != null ? farmersAhead : (isCheckedIn ? 0 : '—')}
           </strong>
-          <span>{isCheckedIn ? (farmersAhead === 0 ? "You're next" : 'Ahead in queue') : 'Prior to check-in'}</span>
+          <span>{isRejected || isCompleted ? 'Completed' : (isCheckedIn ? (farmersAhead === 0 ? "You're next" : 'Ahead in queue') : 'Prior to check-in')}</span>
         </div>
         <div className="queue-stat highlight">
           <small>{isCheckedIn ? 'Estimated Wait' : 'Check-in Time'}</small>
           <strong>
-            {isCheckedIn ? `${currentToken?.estimatedWaitMinutes || 0} min` : (booking.slotId?.startTime || 'On arrival')}
+            {isRejected || isCompleted ? '0 min' : (isCheckedIn ? `${currentToken?.estimatedWaitMinutes || 0} min` : (booking.slotId?.startTime || 'On arrival'))}
           </strong>
-          <span>{isCheckedIn ? 'Approximate wait' : 'Present code at entry'}</span>
+          <span>{isRejected || isCompleted ? 'Finalized' : (isCheckedIn ? 'Approximate wait' : 'Present code at entry')}</span>
         </div>
         <div className="queue-stat">
           <small>Operational Turn</small>
           <strong>
-            {isCheckedIn && queuePos != null ? `#${queuePos}` : '—'}
+            {isRejected ? 'REJECTED' : isCompleted ? 'SERVED' : (isCheckedIn && queuePos != null ? `#${queuePos}` : '—')}
           </strong>
-          <span>{isCheckedIn ? 'Order of service' : 'Generated on check-in'}</span>
+          <span>{isRejected || isCompleted ? 'Finished' : (isCheckedIn ? 'Order of service' : 'Generated on check-in')}</span>
         </div>
       </div>
 
@@ -762,9 +833,196 @@ export function QueuePage() {
   );
 }
 
-export function ProcurementPage() { const { booking } = useLatestBooking(); const [record, setRecord] = useState(null); useEffect(() => { if (booking) api.getProcurementStatus(booking._id).then(setRecord).catch(() => { }); }, [booking]); const status = record?.status || booking?.status || 'pending'; const items = bookingStatuses.map((item) => ({ title: item.replaceAll('_', ' '), description: item === status ? 'Current procurement status.' : 'Status recorded by the procurement workflow.', status: bookingStatuses.indexOf(item) <= bookingStatuses.indexOf(status) ? 'done' : 'future' })); return <div className="dashboard-page status-page"><div className="page-intro"><span className="eyebrow">PROCUREMENT STATUS</span><h2>Stay informed through every stage.</h2><p>{booking ? `Booking ${booking.bookingCode}` : 'No active booking.'}</p></div><section className="status-timeline-card"><div className="timeline-heading"><div><h3>Procurement progress</h3><p>Latest status from the backend</p></div><StatusBadge status={status} /></div><Timeline items={items} current={status.replaceAll('_', ' ')} /></section></div>; }
+export function ProcurementPage() {
+  const { booking } = useLatestBooking();
+  const [record, setRecord] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-export function PaymentPage() { const { booking } = useLatestBooking(); const [payment, setPayment] = useState(null); useEffect(() => { if (booking) api.getPaymentStatus(booking._id).then(setPayment).catch(() => { }); }, [booking]); return <div className="dashboard-page payment-page"><div className="page-intro"><span className="eyebrow">PAYMENT STATUS</span><h2>Settlement details, clearly visible.</h2><p>Payment records are maintained by authorized staff and administrators.</p></div><section className="payment-card">{payment ? <><div className="payment-main"><span><CircleDollarSign size={26} /></span><div><small>PAYABLE AMOUNT</small><strong>{payment.payableAmount ?? 'Not set'}</strong><p>{payment.paymentReference || 'No payment reference yet'}</p></div><StatusBadge status={payment.paymentStatus} /></div><div className="payment-details"><div><small>Status</small><b>{payment.paymentStatus}</b></div><div><small>Paid at</small><b>{formatDate(payment.paidAt)}</b></div></div></> : <div className="empty-state"><Clock3 size={30} /><h3>No settlement record</h3><p>A settlement record will appear after procurement processing.</p></div>}</section></div>; }
+  useEffect(() => {
+    if (booking) {
+      api.getProcurementStatus(booking._id)
+        .then(setRecord)
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, [booking]);
+
+  if (loading) return <div className="dashboard-page"><LoadingSpinner /></div>;
+
+  const status = record?.status || booking?.status || 'pending';
+  const isRejected = status === 'rejected' || booking?.status === 'rejected';
+  const isCompleted = status === 'completed' || booking?.status === 'completed';
+  const isPartial = status === 'partially_accepted' || record?.qualityStatus === 'partially_accepted';
+
+  return (
+    <div className="dashboard-page status-page">
+      <div className="page-intro">
+        <span className="eyebrow">PROCUREMENT STATUS</span>
+        <h2>Stay informed through every stage.</h2>
+        <p>{booking ? `Booking ${booking.bookingCode} • ${booking.centreId?.name || 'Selected Centre'}` : 'No active booking.'}</p>
+      </div>
+
+      <section className="status-timeline-card" style={{ marginBottom: 20 }}>
+        <div className="timeline-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ margin: 0 }}>Procurement Stage &amp; Audit Status</h3>
+            <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>Official verification, inspection, and weighing records</p>
+          </div>
+          <StatusBadge status={status} />
+        </div>
+
+        {isRejected ? (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 12, padding: 18, marginBottom: 20 }}>
+            <h4 style={{ color: '#991b1b', margin: '0 0 6px', fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <AlertTriangle size={18} /> Procurement Rejected
+            </h4>
+            <p style={{ margin: '0 0 8px', color: '#b91c1c', fontSize: '0.95rem' }}>
+              <strong>Rejection Reason:</strong> {record?.rejectionReason || booking?.cancellationReason || 'High moisture content or quality standard not met'}
+            </p>
+            {record?.qualityRemarks && (
+              <p style={{ margin: '0 0 6px', color: '#7f1d1d', fontSize: '0.85rem' }}>
+                <strong>Staff Remarks:</strong> {record.qualityRemarks}
+              </p>
+            )}
+            <p style={{ margin: 0, color: '#64748b', fontSize: '0.8rem' }}>
+              This lot was rejected during counter inspection. No payment settlement was generated.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, background: '#f8fafc', padding: 16, borderRadius: 12, marginBottom: 20, border: '1px solid #e2e8f0' }}>
+            <div>
+              <small style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Booked Quantity</small>
+              <b style={{ color: '#1e293b', fontSize: '1rem' }}>{booking?.bookedQuantity} {booking?.quantityUnit || 'kg'}</b>
+            </div>
+            <div>
+              <small style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Actual Weighed</small>
+              <b style={{ color: '#1e293b', fontSize: '1rem' }}>{record?.actualWeighedQuantity ?? booking?.bookedQuantity ?? '—'} {booking?.quantityUnit || 'kg'}</b>
+            </div>
+            <div>
+              <small style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Accepted Quantity</small>
+              <b style={{ color: '#0f673c', fontSize: '1rem' }}>{record?.acceptedQuantity ?? (isCompleted ? booking?.bookedQuantity : 'Pending')} {booking?.quantityUnit || 'kg'}</b>
+            </div>
+            {(isPartial || (record?.rejectedQuantity != null && record.rejectedQuantity > 0)) && (
+              <div>
+                <small style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Rejected / Deducted</small>
+                <b style={{ color: '#dc2626', fontSize: '1rem' }}>{record?.rejectedQuantity || 0} {booking?.quantityUnit || 'kg'}</b>
+              </div>
+            )}
+            <div>
+              <small style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Quality Grade</small>
+              <b style={{ color: '#1e293b', fontSize: '1rem' }}>{record?.qualityGrade || (isCompleted ? 'Grade A' : 'Pending inspection')}</b>
+            </div>
+            {record?.qualityRemarks && (
+              <div style={{ gridColumn: '1 / -1' }}>
+                <small style={{ color: '#64748b', fontSize: '0.75rem', display: 'block' }}>Quality Remarks</small>
+                <span style={{ color: '#334155', fontSize: '0.88rem' }}>{record.qualityRemarks}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <Timeline
+          items={bookingStatuses.map((item) => ({
+            title: item.replaceAll('_', ' '),
+            description: item === status ? 'Current stage in procurement workflow.' : 'Workflow milestone.',
+            status: bookingStatuses.indexOf(item) <= bookingStatuses.indexOf(status) ? 'done' : 'future'
+          }))}
+          current={status.replaceAll('_', ' ')}
+        />
+      </section>
+    </div>
+  );
+}
+
+export function PaymentPage() {
+  const { booking } = useLatestBooking();
+  const [payment, setPayment] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (booking) {
+      api.getPaymentStatus(booking._id)
+        .then(setPayment)
+        .catch(() => setPayment(null))
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, [booking]);
+
+  if (loading) return <div className="dashboard-page"><LoadingSpinner /></div>;
+
+  const isRejected = booking?.status === 'rejected';
+
+  return (
+    <div className="dashboard-page payment-page">
+      <div className="page-intro">
+        <span className="eyebrow">PAYMENT STATUS</span>
+        <h2>Settlement details, clearly visible.</h2>
+        <p>Government procurement direct benefit transfer and settlement tracking.</p>
+      </div>
+
+      <section className="payment-card">
+        {isRejected ? (
+          <div style={{ padding: 24, textAlign: 'center', background: '#fef2f2', borderRadius: 14, border: '1px solid #fecaca' }}>
+            <div style={{ color: '#dc2626', marginBottom: 8, display: 'inline-flex' }}>
+              <AlertTriangle size={36} />
+            </div>
+            <h3 style={{ margin: '0 0 6px', color: '#991b1b', fontSize: '1.2rem' }}>Ineligible for Payment</h3>
+            <p style={{ color: '#b91c1c', maxWidth: 460, margin: '0 auto 8px', fontSize: '0.9rem' }}>
+              This procurement lot was rejected during inspection ({booking.cancellationReason || 'Quality criteria not satisfied'}).
+            </p>
+            <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
+              No settlement or disbursement is initiated for rejected crop lots.
+            </span>
+          </div>
+        ) : payment ? (
+          <>
+            <div className="payment-main">
+              <span><CircleDollarSign size={26} /></span>
+              <div>
+                <small>PAYABLE AMOUNT</small>
+                <strong>₹{Number(payment.payableAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>
+                <p>Ref: {payment.paymentReference || 'Direct Bank Settlement'}</p>
+              </div>
+              <StatusBadge status={payment.paymentStatus} />
+            </div>
+            <div className="payment-details">
+              <div>
+                <small>Disbursement Status</small>
+                <b>{payment.paymentStatus === 'initiated' ? 'Initiated (Processing Direct Credit)' : payment.paymentStatus}</b>
+              </div>
+              <div>
+                <small>Date Processed</small>
+                <b>{formatDate(payment.paidAt || payment.createdAt)}</b>
+              </div>
+              <div>
+                <small>Beneficiary Centre</small>
+                <b>{booking?.centreId?.name || 'Assigned Centre'}</b>
+              </div>
+              <div>
+                <small>Remarks</small>
+                <b>{payment.paymentRemarks || 'Automated direct procurement payout'}</b>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="empty-state">
+            <Clock3 size={30} />
+            <h3>No settlement record yet</h3>
+            <p>
+              {booking?.status === 'completed'
+                ? 'Your crop was procured. Settlement generation is synchronizing...'
+                : 'A settlement record will automatically generate once centre staff completes weighing and accepts your crop.'}
+            </p>
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
 
 export function NotificationsPage() { const [items, setItems] = useState([]); const { notify } = useApp(); useEffect(() => { api.getNotifications().then(setItems).catch((error) => notify(errorText(error), 'error')); }, []); const markAll = async () => { await api.markAllNotificationsRead(); setItems((current) => current.map((item) => ({ ...item, readAt: new Date().toISOString() }))); }; return <div className="dashboard-page notifications-page"><div className="page-intro split"><div><span className="eyebrow">NOTIFICATIONS</span><h2>Keep up with your procurement.</h2><p>{items.filter((item) => !item.readAt).length} unread updates.</p></div><Button variant="secondary" onClick={markAll}>Mark all as read</Button></div><section className="notification-list">{items.map((item) => <article key={item._id} className={!item.readAt ? 'unread' : ''} onClick={() => !item.readAt && api.markNotificationRead(item._id).then(() => setItems((current) => current.map((entry) => entry._id === item._id ? { ...entry, readAt: new Date().toISOString() } : entry)))}><span className={`notification-icon ${item.type}`}><Bell /></span><div><b>{item.title}</b><p>{item.message}</p></div>{!item.readAt && <i aria-label="Unread"></i>}</article>)}</section></div>; }
 

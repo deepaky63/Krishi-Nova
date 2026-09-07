@@ -54,5 +54,8 @@ export const api = {
   setScheduleStatus: (id, active) => client.patch(`/admin/schedules/${id}/status`, { active }).then(unwrap),
   getStaffDashboard: (params) => client.get('/staff/dashboard', { params }).then(unwrap),
   getStaffBookings: (params) => client.get('/staff/bookings', { params }).then(unwrap),
-
+  completeProcurement: (bookingId, payload) => client.post(`/procurements/${bookingId}/complete`, payload).then(unwrap),
+  rejectProcurement: (bookingId, payload) => client.post(`/procurements/${bookingId}/reject`, payload).then(unwrap),
+  updateProcurementQuality: (bookingId, payload) => client.post(`/procurements/${bookingId}/quality`, payload).then(unwrap),
+  updateProcurementWeighing: (bookingId, payload) => client.post(`/procurements/${bookingId}/weighing`, payload).then(unwrap),
 };

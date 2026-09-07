@@ -11,5 +11,6 @@ router.post('/:bookingId/verify', authorize('staff', 'admin'), asyncHandler(cont
 router.post('/:bookingId/quality', authorize('staff', 'admin'), asyncHandler(controller.quality));
 router.post('/:bookingId/weighing', authorize('staff', 'admin'), asyncHandler(controller.weighing));
 router.post('/:bookingId/complete', authorize('staff', 'admin'), asyncHandler(controller.complete));
+router.post('/:bookingId/reject', authorize('staff', 'admin'), asyncHandler(controller.reject));
 router.post('/settlements', authorize('staff', 'admin'), asyncHandler(controller.createSettlement));
 export default router;

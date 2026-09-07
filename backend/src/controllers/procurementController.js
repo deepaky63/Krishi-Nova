@@ -4,6 +4,7 @@ export const get = async (req, res) => success(res, await service.getByBooking(r
 export const verify = async (req, res) => success(res, await service.verify(req.params.bookingId, req.body, req.user));
 export const quality = async (req, res) => success(res, await service.quality(req.params.bookingId, req.body, req.user));
 export const weighing = async (req, res) => success(res, await service.weighing(req.params.bookingId, req.body, req.user));
-export const complete = async (req, res) => success(res, await service.complete(req.params.bookingId, req.user));
+export const complete = async (req, res) => success(res, await service.complete(req.params.bookingId, req.body, req.user));
+export const reject = async (req, res) => success(res, await service.reject(req.params.bookingId, req.body, req.user));
 export const createSettlement = async (req, res) => success(res, await service.createSettlement(req.body, req.user), 201);
 export const getSettlement = async (req, res) => success(res, await service.getSettlement(req.params.bookingId, req.user));

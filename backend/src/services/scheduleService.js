@@ -197,6 +197,7 @@ export async function createAndGenerate(input, actor) {
   }
 
   return {
+    ...schedule.toObject(),
     schedule,
     generatedCount: slotsToCreate.length,
     message: `Schedule created and ${slotsToCreate.length} slots generated successfully.`,

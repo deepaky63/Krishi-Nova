@@ -26,7 +26,8 @@ export const getBooking = async (req, res) => success(res, await bookings.get(re
 export const getBookingQueue = async (req, res) => success(res, await queue.forBooking(req.params.id, req.user));
 export const cancelBooking = async (req, res) => success(res, await bookings.cancel(req.params.id, req.user, req.body.reason));
 export const checkIn = async (req, res) => {
-  const result = await queue.checkIn(req.params.bookingId, req.user);
+  const bookingId = req.params.bookingId || req.body?.bookingId;
+  const result = await queue.checkIn(bookingId, req.user);
   emitQueueUpdate(result);
   return success(res, result);
 };
