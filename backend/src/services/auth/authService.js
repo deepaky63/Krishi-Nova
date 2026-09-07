@@ -5,7 +5,21 @@ import { env } from '../../config/env.js';
 import { badRequest, unauthorized } from '../../utils/errors.js';
 import { hashToken, randomToken, signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/tokens.js';
 
-const publicUser = (user) => ({ id: user._id, name: user.name, loginId: user.loginId, email: user.email, mobile: user.mobile, role: user.role, status: user.status, preferredLanguage: user.preferredLanguage, assignedCentreIds: user.assignedCentreIds });
+const liveStatuses = ['active', 'pending_verification', 'suspended'];
+const publicUser = (user) => ({
+  id: user._id,
+  name: user.name,
+  loginId: user.loginId,
+  email: user.email,
+  mobile: user.mobile,
+  role: user.role,
+  status: user.status,
+  state: user.state,
+  district: user.district,
+  village: user.village,
+  preferredLanguage: user.preferredLanguage,
+  assignedCentreIds: user.assignedCentreIds,
+});
 export const normalizeIdentifier = (value) => {
   const normalized = String(value || '').trim();
   if (normalized.includes('@')) return { email: normalized.toLowerCase() };
@@ -19,10 +33,45 @@ export const normalizeIdentifier = (value) => {
 };
 
 export async function registerFarmer(input) {
-  if (!input.email && !input.mobile) throw badRequest('Email or mobile is required');
+  const normalizedEmail = input.email?.trim() ? input.email.trim().toLowerCase() : undefined;
+  const normalizedMobile = input.mobile?.replace(/\D/g, '') || undefined;
+  if (!normalizedEmail && !normalizedMobile) throw badRequest('Email or mobile is required');
+
+  if (normalizedMobile) {
+    if (!/^\d{10}$/.test(normalizedMobile)) {
+      throw badRequest('Please enter a valid 10-digit mobile number', 'INVALID_MOBILE');
+    }
+    const existingMobile = await User.findOne({ mobile: normalizedMobile, status: { $in: liveStatuses } });
+    if (existingMobile) throw badRequest('An account with this mobile number already exists.', 'DUPLICATE_MOBILE');
+  }
+
+  if (normalizedEmail) {
+    const existingEmail = await User.findOne({ email: normalizedEmail, status: { $in: liveStatuses } });
+    if (existingEmail) throw badRequest('An account with this email already exists.', 'DUPLICATE_EMAIL');
+  }
+
   const passwordHash = await User.hashPassword(input.password);
-  const user = await User.create({ ...input, email: input.email?.trim().toLowerCase() || undefined, mobile: input.mobile?.replace(/\D/g, '') || undefined, role: 'farmer', passwordHash, status: 'active' });
-  return publicUser(user);
+  try {
+    const user = await User.create({
+      name: input.name?.trim(),
+      email: normalizedEmail,
+      mobile: normalizedMobile,
+      passwordHash,
+      role: 'farmer',
+      status: 'active',
+      state: input.state?.trim() || undefined,
+      district: input.district?.trim() || undefined,
+      village: input.village?.trim() || undefined,
+      preferredLanguage: input.preferredLanguage || 'en',
+    });
+    return publicUser(user);
+  } catch (err) {
+    if (err.code === 11000) {
+      if (err.keyPattern?.mobile) throw badRequest('An account with this mobile number already exists.', 'DUPLICATE_MOBILE');
+      if (err.keyPattern?.email) throw badRequest('An account with this email already exists.', 'DUPLICATE_EMAIL');
+    }
+    throw err;
+  }
 }
 
 export async function login(input, metadata) {

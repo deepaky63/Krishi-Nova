@@ -4,7 +4,8 @@ import { authorize } from '../middleware/authorize.js';
 import { validate } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import * as controller from '../controllers/resourceController.js';
-import { bookingSchema, cancelSchema, centreSchema, commoditySchema, queueStatusSchema, skipSchema, slotSchema } from '../validators/resources.js';
+import * as scheduleController from '../controllers/scheduleController.js';
+import { bookingSchema, cancelSchema, centreSchema, commoditySchema, queueStatusSchema, skipSchema, slotSchema, procurementScheduleSchema, schedulePreviewSchema } from '../validators/resources.js';
 
 const router = Router();
 const protectedPath = /^\/(bookings|staff|admin)(\/|$)/;
@@ -32,4 +33,11 @@ router.patch('/admin/commodities/:id', authorize('admin'), validate(commoditySch
 router.post('/admin/slots', authorize('admin'), validate(slotSchema), asyncHandler(controller.createSlot));
 router.patch('/admin/slots/:id', authorize('admin'), validate(slotSchema.partial()), asyncHandler(controller.updateSlot));
 router.patch('/admin/slots/:id/status', authorize('admin'), asyncHandler(controller.setSlotStatus));
+router.post('/admin/schedules/preview', authorize('admin'), validate(schedulePreviewSchema), asyncHandler(scheduleController.previewSchedule));
+router.post('/admin/schedules', authorize('admin'), validate(procurementScheduleSchema), asyncHandler(scheduleController.createSchedule));
+router.get('/admin/schedules', authorize('admin'), asyncHandler(scheduleController.listSchedules));
+router.get('/admin/schedules/:id', authorize('admin'), asyncHandler(scheduleController.getSchedule));
+router.get('/admin/schedules/:id/slots', authorize('admin'), asyncHandler(scheduleController.getScheduleSlots));
+router.patch('/admin/schedules/:id/status', authorize('admin'), asyncHandler(scheduleController.setScheduleStatus));
 export default router;
+

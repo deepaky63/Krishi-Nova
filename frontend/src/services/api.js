@@ -45,6 +45,13 @@ export const api = {
   setCentreStatus: (id, status) => client.patch(`/admin/centres/${id}/status`, { status }).then(unwrap),
   createSlot: (payload) => client.post('/admin/slots', payload).then(unwrap),
   updateSlot: (id, payload) => client.patch(`/admin/slots/${id}`, payload).then(unwrap),
+  previewSchedule: (payload) => client.post('/admin/schedules/preview', payload).then(unwrap),
+  createSchedule: (payload) => client.post('/admin/schedules', payload).then(unwrap),
+  getAdminSchedules: (params) => client.get('/admin/schedules', { params }).then(unwrap),
+  getAdminSchedule: (id) => client.get(`/admin/schedules/${id}`).then(unwrap),
+  getAdminScheduleSlots: (id, params) => client.get(`/admin/schedules/${id}/slots`, { params }).then(unwrap),
+  setScheduleStatus: (id, active) => client.patch(`/admin/schedules/${id}/status`, { active }).then(unwrap),
   getStaffDashboard: (params) => client.get('/staff/dashboard', { params }).then(unwrap),
   getStaffBookings: (params) => client.get('/staff/bookings', { params }).then(unwrap),
+
 };
