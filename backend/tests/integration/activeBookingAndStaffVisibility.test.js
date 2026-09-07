@@ -209,7 +209,80 @@ test('Farmer Multiple-Booking Prevention & Staff Visibility Suite', async (t) =>
     queueEntryId = res.body.data._id;
   });
 
-  // Test 5: Staff retrieves the queue -> QueueEntry is visible
+  // Test 5: Farmer checks live queue -> sees queuePosition #1 and 0 farmers ahead
+  await t.test('Farmer 1 sees queuePosition = 1 and farmersAhead = 0', async () => {
+    const res = await request(app)
+      .get(`/api/bookings/${firstBookingId}/queue`)
+      .set('Authorization', `Bearer ${farmerToken}`);
+
+    assert.equal(res.status, 200);
+    assert.equal(res.body.success, true);
+    assert.ok(Array.isArray(res.body.data));
+    const entry = res.body.data[0];
+    assert.ok(entry);
+    assert.equal(entry.queuePosition, 1, 'First farmer in queue must have position 1');
+    assert.equal(entry.farmersAhead, 0, 'First farmer in queue must have 0 farmers ahead');
+    assert.equal(entry.totalActiveInQueue, 1);
+  });
+
+  // Test 6: A second farmer books and checks in -> has queuePosition #2 and 1 farmer ahead
+  let farmer2User;
+  let farmer2Token;
+  let booking2Id;
+  await t.test('Second farmer books and checks in -> has queuePosition 2 and 1 farmer ahead', async () => {
+    const farmer2Mobile = `986${String(ts).slice(-7)}`;
+    const farmer2Email = `farmer2_${ts}@example.com`;
+
+    const regRes = await request(app)
+      .post('/api/auth/register')
+      .send({
+        name: `Farmer Two ${ts}`,
+        mobile: farmer2Mobile,
+        email: farmer2Email,
+        password: testPassword,
+        state: 'Haryana',
+        district: 'Karnal'
+      });
+    assert.equal(regRes.status, 201);
+    farmer2User = regRes.body.data.user;
+
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({ identifier: farmer2Mobile, password: testPassword });
+    assert.equal(loginRes.status, 200);
+    farmer2Token = loginRes.body.data.accessToken;
+
+    const bookRes = await request(app)
+      .post('/api/bookings')
+      .set('Authorization', `Bearer ${farmer2Token}`)
+      .send({
+        centreId: testCentre._id,
+        slotId: testSlot1._id,
+        commodityName: 'Wheat',
+        bookedQuantity: 25,
+        quantityUnit: 'kg'
+      });
+    assert.equal(bookRes.status, 201);
+    booking2Id = bookRes.body.data._id;
+
+    // Staff checks in farmer 2
+    const checkInRes = await request(app)
+      .post(`/api/staff/bookings/${booking2Id}/check-in`)
+      .set('Authorization', `Bearer ${staffToken}`);
+    assert.equal(checkInRes.status, 200);
+
+    // Check Farmer 2's queue position
+    const q2Res = await request(app)
+      .get(`/api/bookings/${booking2Id}/queue`)
+      .set('Authorization', `Bearer ${farmer2Token}`);
+    assert.equal(q2Res.status, 200);
+    const entry2 = q2Res.body.data[0];
+    assert.equal(entry2.queuePosition, 2, 'Second farmer should have position 2');
+    assert.equal(entry2.farmersAhead, 1, 'Second farmer should have 1 farmer ahead');
+    assert.equal(entry2.totalActiveInQueue, 2);
+  });
+
+  // Test 7: Staff retrieves the queue -> both entries visible
   await t.test('Staff can view live queue entries for centre', async () => {
     const res = await request(app)
       .get('/api/staff/queue')
@@ -222,28 +295,34 @@ test('Farmer Multiple-Booking Prevention & Staff Visibility Suite', async (t) =>
     assert.ok(found, 'Queue entry must be listed for staff');
   });
 
-  // Test 6: Staff updates status to processing and then served
-  await t.test('Staff transitions farmer queue entry through processing to served', async () => {
+  // Test 8: Staff sets Farmer 1 to processing and then served -> Farmer 2 moves to #1 with 0 ahead
+  await t.test('When Farmer 1 completes, Farmer 2 becomes #1 with 0 farmers ahead', async () => {
+    // Process Farmer 1
     const procRes = await request(app)
       .patch(`/api/staff/queue/${queueEntryId}/status`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ status: 'processing' });
     assert.equal(procRes.status, 200);
-    assert.equal(procRes.body.data.status, 'processing');
 
+    // Serve Farmer 1
     const servedRes = await request(app)
       .patch(`/api/staff/queue/${queueEntryId}/status`)
       .set('Authorization', `Bearer ${staffToken}`)
       .send({ status: 'served' });
     assert.equal(servedRes.status, 200);
-    assert.equal(servedRes.body.data.status, 'served');
+
+    // Now Farmer 2 checks their queue: should be position 1 with 0 ahead!
+    const q2Res = await request(app)
+      .get(`/api/bookings/${booking2Id}/queue`)
+      .set('Authorization', `Bearer ${farmer2Token}`);
+    assert.equal(q2Res.status, 200);
+    const entry2 = q2Res.body.data[0];
+    assert.equal(entry2.queuePosition, 1, 'Farmer 2 must now be #1');
+    assert.equal(entry2.farmersAhead, 0, 'Farmer 2 must now have 0 farmers ahead');
   });
 
-  // Test 7: After booking is completed/cancelled, Farmer CAN book a new slot
+  // Test 9: After booking is completed/cancelled, Farmer 1 CAN book a new slot
   await t.test('Farmer can book a new slot after previous booking is completed/cancelled', async () => {
-    // Mark previous booking completed (or cancelled)
-    await Booking.findByIdAndUpdate(firstBookingId, { status: 'completed' });
-
     const res = await request(app)
       .post('/api/bookings')
       .set('Authorization', `Bearer ${farmerToken}`)

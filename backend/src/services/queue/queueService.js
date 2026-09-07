@@ -51,10 +51,48 @@ export async function list(filter, user) {
 }
 
 export async function forBooking(bookingId, user) {
-  const booking = await Booking.findById(bookingId);
+  const booking = await Booking.findById(bookingId).populate('centreId slotId commodityId');
   if (!booking) throw notFound('Booking not found');
   if (user.role === 'farmer' && booking.farmerId.toString() !== user._id.toString()) throw forbidden();
-  return QueueEntry.find({ bookingId }).populate('bookingId farmerId slotId').sort({ checkedInAt: 1 });
+
+  const entries = await QueueEntry.find({ bookingId }).populate('bookingId farmerId slotId').sort({ checkedInAt: 1 });
+  
+  // Calculate operational queue position & farmers ahead if there is an active queue entry
+  const activeEntry = entries.find((e) => ['waiting', 'checked_in', 'processing'].includes(e.status));
+  
+  let queuePosition = null;
+  let farmersAhead = null;
+  let totalActiveInQueue = 0;
+
+  if (activeEntry) {
+    // Find all active queue entries for the same centre, slot, and date
+    const activeEntries = await QueueEntry.find({
+      centreId: activeEntry.centreId,
+      slotId: activeEntry.slotId,
+      queueDate: activeEntry.queueDate,
+      status: { $in: ['processing', 'checked_in', 'waiting'] }
+    }).sort({ priorityOverride: -1, checkedInAt: 1, createdAt: 1 });
+
+    totalActiveInQueue = activeEntries.length;
+    const activeIndex = activeEntries.findIndex(
+      (item) => item._id.toString() === activeEntry._id.toString()
+    );
+
+    if (activeIndex !== -1) {
+      queuePosition = activeIndex + 1;
+      farmersAhead = Math.max(0, activeIndex);
+    }
+  }
+
+  return entries.map((entry) => {
+    const doc = entry.toObject();
+    if (activeEntry && entry._id.toString() === activeEntry._id.toString()) {
+      doc.queuePosition = queuePosition;
+      doc.farmersAhead = farmersAhead;
+      doc.totalActiveInQueue = totalActiveInQueue;
+    }
+    return doc;
+  });
 }
 
 export async function updateStatus(id, status, actor) {

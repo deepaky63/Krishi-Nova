@@ -346,24 +346,38 @@ export function QueuePage() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const fetchQueueData = () => {
+    if (!booking) return Promise.resolve();
+    return api.getBookingQueue(booking._id)
+      .then((result) => setItems(Array.isArray(result) ? result : []))
+      .catch(() => setItems([]));
+  };
+
   useEffect(() => {
     if (!booking) {
       setLoading(false);
       return;
     }
     let socket;
-    api.getBookingQueue(booking._id).then((result) => {
-      setItems(Array.isArray(result) ? result : []);
-      const entry = result[0];
-      if (entry && getAccessToken()) {
-        const centreId = entry.centreId?._id || entry.centreId;
-        const slotId = entry.slotId?._id || entry.slotId;
-        socket = connectQueueSocket(getAccessToken(), {
-          updated: (next) => setItems((current) => current.map((item) => item._id === next._id ? next : item))
-        });
-        socket.emit('queue:join', { bookingId: booking._id, centreId, slotId, date: booking.bookingDate });
-      }
-    }).catch(() => setItems([])).finally(() => setLoading(false));
+    fetchQueueData().finally(() => setLoading(false));
+
+    if (getAccessToken()) {
+      const centreId = booking.centreId?._id || booking.centreId;
+      const slotId = booking.slotId?._id || booking.slotId;
+      socket = connectQueueSocket(getAccessToken(), {
+        updated: () => {
+          // Refresh queue data so queuePosition and farmersAhead recalculate live
+          fetchQueueData();
+        }
+      });
+      socket.emit('queue:join', {
+        bookingId: booking._id,
+        centreId: String(centreId),
+        slotId: String(slotId),
+        date: booking.bookingDate
+      });
+    }
+
     return () => socket?.disconnect();
   }, [booking]);
 
@@ -384,6 +398,37 @@ export function QueuePage() {
 
   const isCheckedIn = items.length > 0;
   const currentToken = items[0];
+  const activeStatus = currentToken ? currentToken.status : booking.status;
+
+  // Queue position and farmers ahead calculation from operational queue entry
+  const queuePos = currentToken?.queuePosition;
+  const farmersAhead = currentToken?.farmersAhead;
+
+  // Determine formal message
+  let formalMessage = '';
+  if (booking.status === 'cancelled' || activeStatus === 'cancelled') {
+    formalMessage = 'This booking has been cancelled.';
+  } else if (booking.status === 'no_show' || activeStatus === 'no_show') {
+    formalMessage = 'You were marked as no-show for this booking. Please contact the procurement centre if you need assistance.';
+  } else if (activeStatus === 'served' || booking.status === 'completed') {
+    formalMessage = 'Your procurement has been completed successfully.';
+  } else if (activeStatus === 'processing') {
+    formalMessage = 'Your procurement is currently being processed. Please follow the instructions from centre staff.';
+  } else if (activeStatus === 'checked_in') {
+    if (farmersAhead === 0) {
+      formalMessage = 'You have checked in successfully. You are next in line. Please remain available.';
+    } else {
+      formalMessage = `You have checked in successfully. There are ${farmersAhead} farmers ahead of you. Please remain available.`;
+    }
+  } else if (activeStatus === 'waiting') {
+    if (farmersAhead === 0) {
+      formalMessage = 'You are in the queue. You are next in line. Please wait for your turn.';
+    } else {
+      formalMessage = `You are in the queue. There are ${farmersAhead} farmers ahead of you. Please wait for your turn.`;
+    }
+  } else {
+    formalMessage = 'Your booking is confirmed. Please arrive at the procurement centre at your scheduled time.';
+  }
 
   return (
     <div className="dashboard-page queue-page">
@@ -394,7 +439,7 @@ export function QueuePage() {
       <section className="today-status" style={{ marginBottom: 20 }}>
         <div className="today-status-top">
           <div>
-            <StatusBadge status={isCheckedIn ? currentToken.status : booking.status} />
+            <StatusBadge status={activeStatus} />
             <h2>Live Queue &amp; Operational Status</h2>
             <p>{booking.centreId?.name || 'Selected Procurement Centre'}</p>
           </div>
@@ -425,11 +470,121 @@ export function QueuePage() {
         </div>
       </section>
 
+      {/* Prominent Real-Time Queue Position Display */}
+      <section
+        className="queue-position-card"
+        style={{
+          background: '#ffffff',
+          border: '1px solid #d9e7da',
+          borderRadius: 16,
+          padding: '24px 28px',
+          marginBottom: 23,
+          boxShadow: '0 8px 24px rgba(13, 57, 34, 0.06)',
+          display: 'grid',
+          gridTemplateColumns: 'auto 1fr',
+          gap: 28,
+          alignItems: 'center'
+        }}
+      >
+        <div
+          style={{
+            minWidth: 140,
+            textAlign: 'center',
+            borderRight: '1px solid #e2e8f0',
+            paddingRight: 24
+          }}
+        >
+          <span
+            className="eyebrow"
+            style={{ marginBottom: 4, letterSpacing: '0.1em', fontSize: '0.7rem' }}
+          >
+            {activeStatus === 'processing' ? 'IN SERVICE' : isCheckedIn ? 'QUEUE POSITION' : 'BOOKING STATUS'}
+          </span>
+          <div
+            style={{
+              fontSize: '2.8rem',
+              fontWeight: 800,
+              lineHeight: 1.05,
+              color: activeStatus === 'processing' ? '#2563eb' : (isCheckedIn ? '#0f673c' : '#1e293b'),
+              letterSpacing: '-0.04em'
+            }}
+          >
+            {activeStatus === 'processing'
+              ? 'NOW'
+              : (isCheckedIn && queuePos != null ? `#${queuePos}` : (isCheckedIn && currentToken.queueNumber ? currentToken.queueNumber : 'CONFIRMED'))}
+          </div>
+          <div
+            style={{
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              color: activeStatus === 'processing' ? '#2563eb' : (farmersAhead === 0 ? '#059669' : '#d97706'),
+              marginTop: 6
+            }}
+          >
+            {activeStatus === 'processing'
+              ? 'Currently processing'
+              : isCheckedIn && farmersAhead != null
+                ? (farmersAhead === 0 ? "You're next in line" : `${farmersAhead} farmers ahead of you`)
+                : (isCheckedIn ? 'In queue' : 'Awaiting check-in')}
+          </div>
+        </div>
+
+        <div>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              fontSize: '0.72rem',
+              fontWeight: 800,
+              textTransform: 'uppercase',
+              letterSpacing: '0.08em',
+              color: '#0f673c',
+              marginBottom: 6
+            }}
+          >
+            <UsersRound size={15} />
+            <span>Operational Status &amp; Guidance</span>
+          </div>
+          <p
+            style={{
+              fontSize: '1.02rem',
+              fontWeight: 600,
+              color: '#1e293b',
+              lineHeight: 1.45,
+              margin: 0
+            }}
+          >
+            "{formalMessage}"
+          </p>
+          <div
+            style={{
+              display: 'flex',
+              gap: 18,
+              marginTop: 12,
+              fontSize: '0.75rem',
+              color: '#64748b'
+            }}
+          >
+            <span>Token: <strong style={{ color: '#0f673c' }}>{currentToken?.queueNumber || 'Pending check-in'}</strong></span>
+            <span>Est. Wait: <strong style={{ color: '#1e293b' }}>{currentToken?.estimatedWaitMinutes != null ? `${currentToken.estimatedWaitMinutes} min` : 'Calculated at entry'}</strong></span>
+            <span>Total Active in Queue: <strong style={{ color: '#1e293b' }}>{currentToken?.totalActiveInQueue || (isCheckedIn ? 1 : 0)}</strong></span>
+          </div>
+        </div>
+      </section>
+
       <div className="queue-overview">
         <div className="queue-stat">
           <small>{isCheckedIn ? 'Queue Token' : 'Current Status'}</small>
           <strong>{isCheckedIn ? currentToken.queueNumber : 'CONFIRMED'}</strong>
           <span>{isCheckedIn ? 'Assigned at check-in' : 'Awaiting arrival at centre'}</span>
+        </div>
+        <div className="queue-stat">
+          <small>Farmers Ahead</small>
+          <strong>
+            {isCheckedIn && farmersAhead != null ? farmersAhead : (isCheckedIn ? 0 : '—')}
+          </strong>
+          <span>{isCheckedIn ? (farmersAhead === 0 ? "You're next" : 'Ahead in queue') : 'Prior to check-in'}</span>
         </div>
         <div className="queue-stat highlight">
           <small>{isCheckedIn ? 'Estimated Wait' : 'Check-in Time'}</small>
@@ -437,6 +592,13 @@ export function QueuePage() {
             {isCheckedIn ? `${currentToken?.estimatedWaitMinutes || 0} min` : (booking.slotId?.startTime || 'On arrival')}
           </strong>
           <span>{isCheckedIn ? 'Approximate wait' : 'Present code at entry'}</span>
+        </div>
+        <div className="queue-stat">
+          <small>Operational Turn</small>
+          <strong>
+            {isCheckedIn && queuePos != null ? `#${queuePos}` : '—'}
+          </strong>
+          <span>{isCheckedIn ? 'Order of service' : 'Generated on check-in'}</span>
         </div>
       </div>
 
@@ -454,7 +616,7 @@ export function QueuePage() {
         {isCheckedIn ? (
           <div className="token-list">
             {items.map((item) => (
-              <div className={item.status} key={item._id}>
+              <div className={`${item.status} you`} key={item._id}>
                 <span><Clock3 size={15} /></span>
                 <b>{item.queueNumber}</b>
                 <small>{item.status?.replace('_', ' ')}</small>
