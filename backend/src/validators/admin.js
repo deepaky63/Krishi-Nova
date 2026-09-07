@@ -5,6 +5,7 @@ const password = z.string().min(8).max(128);
 
 export const createStaffSchema = z.object({
   name: z.string().trim().min(2).max(120),
+  loginId: z.string().trim().min(3).max(20).optional(),
   email: z.string().email(),
   mobile: z.string().regex(/^\d{10}$/),
   password,
@@ -14,6 +15,7 @@ export const createStaffSchema = z.object({
 
 export const updateStaffSchema = z.object({
   name: z.string().trim().min(2).max(120).optional(),
+  loginId: z.string().trim().min(3).max(20).optional(),
   email: z.string().email().optional(),
   mobile: z.string().regex(/^\d{10}$/).optional(),
   preferredLanguage: z.enum(['en', 'hi']).optional(),

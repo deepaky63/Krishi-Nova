@@ -5,11 +5,16 @@ import { env } from '../../config/env.js';
 import { badRequest, unauthorized } from '../../utils/errors.js';
 import { hashToken, randomToken, signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/tokens.js';
 
-const publicUser = (user) => ({ id: user._id, name: user.name, email: user.email, mobile: user.mobile, role: user.role, status: user.status, preferredLanguage: user.preferredLanguage, assignedCentreIds: user.assignedCentreIds });
+const publicUser = (user) => ({ id: user._id, name: user.name, loginId: user.loginId, email: user.email, mobile: user.mobile, role: user.role, status: user.status, preferredLanguage: user.preferredLanguage, assignedCentreIds: user.assignedCentreIds });
 export const normalizeIdentifier = (value) => {
   const normalized = String(value || '').trim();
   if (normalized.includes('@')) return { email: normalized.toLowerCase() };
   const digits = normalized.replace(/\D/g, '');
+  // If the input is purely digits (10-digit mobile), search by mobile
+  if (/^\d{10,}$/.test(normalized)) return { mobile: digits.length > 10 ? digits.slice(-10) : digits };
+  // Otherwise treat it as a loginId (e.g. STAFF-001, ADMIN-001)
+  if (normalized.length >= 3 && !/^\d+$/.test(normalized)) return { loginId: normalized.toUpperCase() };
+  // Fallback to mobile search
   return { mobile: digits.length > 10 ? digits.slice(-10) : digits };
 };
 

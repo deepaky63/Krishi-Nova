@@ -10,7 +10,9 @@ export const createStaff = async (req, res) => {
 	const centreCount = await Centre.countDocuments({ _id: { $in: req.body.assignedCentreIds }, status: { $in: ['active', 'inactive'] } });
 	if (centreCount !== req.body.assignedCentreIds.length) return res.status(400).json({ success: false, message: 'One or more assigned centres are invalid', code: 'INVALID_CENTRE_ASSIGNMENT' });
 	const passwordHash = await User.hashPassword(req.body.password);
-	const user = await User.create({ name: req.body.name, email: req.body.email.trim().toLowerCase(), mobile: req.body.mobile.replace(/\D/g, ''), passwordHash, role: 'staff', status: 'active', assignedCentreIds: req.body.assignedCentreIds, preferredLanguage: req.body.preferredLanguage });
+	const staffCount = await User.countDocuments({ role: 'staff' });
+	const loginId = req.body.loginId || `STAFF-${String(staffCount + 1).padStart(3, '0')}`;
+	const user = await User.create({ name: req.body.name, loginId, email: req.body.email.trim().toLowerCase(), mobile: req.body.mobile.replace(/\D/g, ''), passwordHash, role: 'staff', status: 'active', assignedCentreIds: req.body.assignedCentreIds, preferredLanguage: req.body.preferredLanguage });
 	return success(res, { user: await User.findById(user._id).select('-passwordHash').populate('assignedCentreIds', 'name centreCode district address') }, 201);
 };
 export const updateStaff = async (req, res) => {

@@ -45,10 +45,10 @@ export function LoginPage() {
         </div>
       </section>
       <section className="auth-card">
-        <div className="auth-card-heading"><span className="icon-box green"><Phone /></span><div><h2>Sign in</h2><p>Use your registered email or mobile number to continue.</p></div></div>
+        <div className="auth-card-heading"><span className="icon-box green"><Phone /></span><div><h2>Sign in</h2><p>Use your login ID, email, or mobile number to continue.</p></div></div>
         <div className="role-switch" role="group" aria-label="Select portal role">{['farmer', 'staff', 'admin'].map((item) => <button type="button" className={role === item ? 'active' : ''} aria-pressed={role === item} onClick={() => setRole(item)} key={item}>{item}</button>)}</div>
         <form onSubmit={login}>
-          <label htmlFor="login-identifier">Email or mobile number<input id="login-identifier" value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="Enter email or 10-digit mobile number" autoFocus required /></label>
+          <label htmlFor="login-identifier">Login ID, email, or mobile<input id="login-identifier" value={identifier} onChange={(event) => setIdentifier(event.target.value)} placeholder="Enter login ID, email, or mobile number" autoFocus required /></label>
           <label htmlFor="login-password">Password<div className="password-field"><input id="login-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" required /><button type="button" aria-label={showPassword ? 'Hide password' : 'Show password'} onClick={() => setShowPassword((visible) => !visible)}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></div></label>
           <Button type="submit" className="wide" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</Button>
         </form>
